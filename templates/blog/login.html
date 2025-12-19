@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}用户登录 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <h2>用户登录</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">用户名:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">记住我</label>
+            </div>
+            <button type="submit" class="btn">登录</button>
+        </form>
+        <p><a href="{% url 'register' %}">还没有账号？点击注册</a></p>
+    </div>
+</div>
+{% endblock %}

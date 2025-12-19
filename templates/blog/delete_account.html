@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}注销账户 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <h2>注销账户</h2>
+        <div class="alert alert-warning">
+            <strong>警告!</strong> 您即将永久删除您的账户，包括所有相关的文章、评论和其他数据。此操作不可逆转。
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="confirm" value="yes" required> 
+                    我确认我要永久删除我的账户及其所有相关内容
+                </label>
+            </div>
+            <button type="submit" class="btn btn-danger">确认注销</button>
+            <a href="{% url 'profile' %}" class="btn btn-secondary">取消</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

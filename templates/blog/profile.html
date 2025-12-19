@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}个人资料 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>个人资料</h2>
+    
+    <div class="profile-container">
+        <div class="profile-avatar">
+            <img src="{{ user.get_avatar_url }}" alt="Avatar" class="avatar-img">
+            <h3>{{ user.username }}</h3>
+            <p>注册时间: {{ user.date_joined|date:"Y-m-d" }}</p>
+        </div>
+        
+        <div class="profile-form">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">用户名:</label>
+                    {{ form.username }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">邮箱:</label>
+                    {{ form.email }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.age.id_for_label }}">年龄:</label>
+                    {{ form.age }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.gender.id_for_label }}">性别:</label>
+                    {{ form.gender }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.signature.id_for_label }}">个性签名:</label>
+                    {{ form.signature }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.avatar.id_for_label }}">头像:</label>
+                    {{ form.avatar }}
+                </div>
+                
+                <button type="submit" class="btn btn-primary">更新资料</button>
+            </form>
+            
+            <!-- 修改密码表单 -->
+            <div class="form-container" style="margin-top: 30px;">
+                <h3>修改密码</h3>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="change_password" value="true">
+                    <div class="form-group">
+                        <label for="{{ password_form.old_password.id_for_label }}">当前密码:</label>
+                        {{ password_form.old_password }}
+                        {% if password_form.old_password.errors %}
+                            <div class="error">{{ password_form.old_password.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ password_form.new_password1.id_for_label }}">新密码:</label>
+                        {{ password_form.new_password1 }}
+                        {% if password_form.new_password1.errors %}
+                            <div class="error">{{ password_form.new_password1.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ password_form.new_password2.id_for_label }}">确认新密码:</label>
+                        {{ password_form.new_password2 }}
+                        {% if password_form.new_password2.errors %}
+                            <div class="error">{{ password_form.new_password2.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-warning">修改密码</button>
+                </form>
+            </div>
+            
+            <!-- 注销账户 -->
+            <div class="form-container" style="margin-top: 30px;">
+                <h3>注销账户</h3>
+                <p>注意：注销账户将永久删除您的所有数据，此操作不可逆转。</p>
+                <a href="{% url 'delete_account' %}" class="btn btn-danger">注销账户</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 布局偏好设置 -->
+    <div class="layout-preference">
+        <h3>布局偏好设置</h3>
+        <p>选择您喜欢的网站布局：</p>
+        <div class="layout-options">
+            <div class="layout-option {% if layout_preference == 'default' %}active{% endif %}" 
+                 onclick="setLayoutPreference('default')">
+                默认布局
+            </div>
+            <div class="layout-option {% if layout_preference == 'compact' %}active{% endif %}" 
+                 onclick="setLayoutPreference('compact')">
+                紧凑布局
+            </div>
+            <div class="layout-option {% if layout_preference == 'spacious' %}active{% endif %}" 
+                 onclick="setLayoutPreference('spacious')">
+                宽松布局
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

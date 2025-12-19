@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ user.username }}的主页 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="user-profile">
+        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+            <img src="{{ user.get_avatar_url }}" alt="{{ user.username }}" class="avatar-img">
+            <div>
+                <h2>{{ user.username }}</h2>
+                <p>角色: {{ user.get_role_display }}</p>
+                {% if user.signature %}
+                    <p>签名: {{ user.signature }}</p>
+                {% endif %}
+                {% if user.age %}
+                    <p>年龄: {{ user.age }}</p>
+                {% endif %}
+                {% if user.gender %}
+                    <p>性别: {{ user.get_gender_display|default:user.gender }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if user.is_authenticated and user != user_profile %}
+        <div class="user-actions">
+            {% if is_following %}
+                <a href="{% url 'unfollow_user' user.id %}" class="btn unfollow-btn">取消关注</a>
+            {% else %}
+                <a href="{% url 'follow_user' user.id %}" class="btn follow-btn">关注</a>
+            {% endif %}
+            
+            <!-- 私信表单 -->
+            <div class="message-form">
+                <form method="post" action="{% url 'send_message' user.id %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <textarea name="content" placeholder="发送私信给 {{ user.username }}..." rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn">发送私信</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="user-posts">
+        <h3>{{ user.username }}的文章</h3>
+        {% for post in user_posts %}
+            <article class="post-preview">
+                <h4><a href="{% url 'post_detail' post.id %}">{{ post.title }}</a></h4>
+                <p class="post-meta">
+                    发布时间: {{ post.date_posted|date:"Y-m-d H:i" }}
+                </p>
+                <div class="post-content">
+                    {{ post.content|truncatewords:30 }}
+                </div>
+            </article>
+        {% empty %}
+            <p>{{ user.username }}还没有发表任何文章。</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 举报表单模态框 -->
+<div id="reportModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeReportModal()">&times;</span>
+        <h3>举报内容</h3>
+        <form id="reportForm" method="post" action="{% url 'report_content' %}">
+            {% csrf_token %}
+            <input type="hidden" name="post_id" id="reportPostId">
+            <input type="hidden" name="comment_id" id="reportCommentId">
+            <div class="form-group">
+                <label for="reportReason">举报原因:</label>
+                <textarea id="reportReason" name="reason" class="form-control" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn">提交举报</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

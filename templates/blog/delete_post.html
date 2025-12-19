@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}删除文章 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-container">
+        <h2>删除文章</h2>
+        <p>确定要删除文章 "{{ post.title }}" 吗？此操作不可撤销。</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">确认删除</button>
+        </form>
+        <a href="{% url 'post_detail' post.id %}" class="btn btn-secondary">取消</a>
+    </div>
+</div>
+{% endblock %}

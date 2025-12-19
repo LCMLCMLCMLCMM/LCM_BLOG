@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}收件箱 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>收件箱</h2>
+    
+    {% if messages_list %}
+        <div class="messages-list">
+            {% for message in messages_list %}
+                <div class="message-item {% if not message.is_read %}unread{% endif %}">
+                    <div class="message-header">
+                        <span class="sender">来自: <a href="{% url 'user_home' message.sender.id %}">{{ message.sender.username }}</a></span>
+                        <span class="timestamp">{{ message.timestamp|date:"Y-m-d H:i" }}</span>
+                    </div>
+                    <div class="message-content">
+                        {{ message.content|linebreaks }}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>暂无消息。</p>
+    {% endif %}
+</div>
+{% endblock %}

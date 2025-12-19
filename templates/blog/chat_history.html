@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}与 {{ partner.username }} 的聊天 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="chat-container">
+        <div class="chat-window">
+            <div class="chat-header">
+                <div class="chat-partner-info">
+                    <img src="{{ partner.get_avatar_url }}" alt="{{ partner.username }}" class="chat-partner-avatar">
+                    <span class="chat-partner-name">{{ partner.username }}</span>
+                </div>
+                <a href="{% url 'chat_sessions' %}" class="back-button">返回会话列表</a>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                {% for message in messages_history %}
+                    <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
+                        {% if message.sender != user %}
+                            <div class="message-avatar">
+                                <img src="{{ message.sender.get_avatar_url }}" alt="{{ message.sender.username }}">
+                            </div>
+                        {% endif %}
+                        <div class="message-content">
+                            <div class="message-text">{{ message.content }}</div>
+                            <div class="message-time">{{ message.timestamp|date:"H:i" }}</div>
+                        </div>
+                        {% if message.sender == user %}
+                            <div class="message-avatar">
+                                <img src="{{ message.sender.get_avatar_url }}" alt="{{ message.sender.username }}">
+                            </div>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="no-chats">还没有消息，开始聊天吧！</div>
+                {% endfor %}
+            </div>
+            
+            <div class="chat-input-area">
+                <form method="post" action="{% url 'send_chat_message' partner.id %}" id="chatForm">
+                    {% csrf_token %}
+                    <input type="text" name="content" id="messageInput" placeholder="输入消息..." required>
+                    <button type="submit" class="send-button">发送</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 聊天布局偏好设置 -->
+    <div class="layout-preference" style="margin-top: 20px;">
+        <h3>聊天布局设置</h3>
+        <p>选择您喜欢的聊天布局：</p>
+        <div class="layout-options">
+            <div class="layout-option {% if chat_layout == 'default' %}active{% endif %}" 
+                 onclick="setChatLayout('default')">
+                默认布局
+            </div>
+            <div class="layout-option {% if chat_layout == 'compact' %}active{% endif %}" 
+                 onclick="setChatLayout('compact')">
+                紧凑布局
+            </div>
+            <div class="layout-option {% if chat_layout == 'wide' %}active{% endif %}" 
+                 onclick="setChatLayout('wide')">
+                宽屏布局
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 自动滚动到底部
+document.addEventListener('DOMContentLoaded', function() {
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // 处理表单提交
+    const chatForm = document.getElementById('chatForm');
+    const messageInput = document.getElementById('messageInput');
+    
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const content = messageInput.value.trim();
+        
+        if (content) {
+            // 发送AJAX请求
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // 清空输入框
+                    messageInput.value = '';
+                    
+                    // 这里可以添加实时更新消息的功能
+                    // 为简化起见，我们重新加载页面
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    });
+});
+
+function setChatLayout(layout) {
+    fetch("{% url 'set_chat_layout' %}", {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: new URLSearchParams({ layout: layout })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+</script>
+{% endblock %}

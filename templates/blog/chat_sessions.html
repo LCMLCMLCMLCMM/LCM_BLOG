@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}私信会话 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="chat-container">
+        <div class="chat-sidebar">
+            <div class="chat-header">
+                <h2>私信</h2>
+            </div>
+            <div class="chat-search">
+                <input type="text" placeholder="搜索用户...">
+            </div>
+            <div class="chat-session-list">
+                {% for chat in chats %}
+                <a href="{% url 'chat_history' chat.partner.id %}" class="chat-session {% if chat.unread_count > 0 %}unread{% endif %}">
+                    <div class="chat-session-avatar">
+                        <img src="{{ chat.partner.get_avatar_url }}" alt="{{ chat.partner.username }}">
+                    </div>
+                    <div class="chat-session-info">
+                        <div class="chat-session-name">{{ chat.partner.username }}</div>
+                        {% if chat.last_message %}
+                        <div class="chat-session-preview">
+                            {% if chat.last_message.sender == user %}
+                                我: {{ chat.last_message.content|truncatechars:20 }}
+                            {% else %}
+                                {{ chat.last_message.content|truncatechars:20 }}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="chat-session-meta">
+                        {% if chat.last_message %}
+                        <div class="chat-session-time">{{ chat.last_message.timestamp|date:"H:i" }}</div>
+                        {% endif %}
+                        {% if chat.unread_count > 0 %}
+                        <div class="chat-unread-count">{{ chat.unread_count }}</div>
+                        {% endif %}
+                    </div>
+                </a>
+                {% empty %}
+                <div class="no-chats">
+                    <p>暂无私信会话</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 添加一些交互功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 会话搜索功能
+    const searchInput = document.querySelector('.chat-search input');
+    const chatSessions = document.querySelectorAll('.chat-session');
+    
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        chatSessions.forEach(session => {
+            const sessionName = session.querySelector('.chat-session-name').textContent.toLowerCase();
+            if (sessionName.includes(searchTerm)) {
+                session.style.display = 'flex';
+            } else {
+                session.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

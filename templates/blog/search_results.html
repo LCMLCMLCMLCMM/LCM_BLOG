@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}搜索结果 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>搜索结果</h2>
+    
+    <form method="get" class="search-form">
+        <div class="form-group">
+            <input type="text" name="q" value="{{ query }}" placeholder="搜索文章或用户..." required>
+            <button type="submit" class="btn">搜索</button>
+        </div>
+    </form>
+    
+    {% if query %}
+    <div class="search-results">
+        <h3>文章搜索结果</h3>
+        {% for post in posts %}
+            <article class="post-preview">
+                <h4><a href="{% url 'post_detail' post.id %}">{{ post.title }}</a></h4>
+                <p class="post-meta">
+                    作者: <a href="{% url 'user_home' post.author.id %}">{{ post.author.username }}</a> | 
+                    发布时间: {{ post.date_posted|date:"Y-m-d H:i" }}
+                </p>
+                <div class="post-content">
+                    {{ post.content|truncatewords:30 }}
+                </div>
+            </article>
+        {% empty %}
+            <p>没有找到相关的文章。</p>
+        {% endfor %}
+        
+        <h3>用户搜索结果</h3>
+        {% for user in users %}
+            <div class="user-result">
+                <h4><a href="{% url 'user_home' user.id %}">{{ user.username }}</a></h4>
+                <p>角色: {{ user.get_role_display }}</p>
+            </div>
+        {% empty %}
+            <p>没有找到相关的用户。</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

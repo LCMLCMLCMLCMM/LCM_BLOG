@@ -1,0 +1,338 @@
+{% load i18n static %}
+<!DOCTYPE html>
+{% get_current_language as LANGUAGE_CODE %}{% get_current_language_bidi as LANGUAGE_BIDI %}
+<html lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+<head>
+<title>{% block title %}{% endblock %}</title>
+<link rel="stylesheet" type="text/css" href="{% block stylesheet %}{% static "admin/css/base.css" %}{% endblock %}">
+{% block extrastyle %}
+<style>
+/* 自定义样式 */
+:root {
+  --primary: #2c3e50;
+  --secondary: #3498db;
+  --accent: #e74c3c;
+  --success: #2ecc71;
+  --warning: #f39c12;
+  --info: #3498db;
+  --dark: #1a1a1a;
+  --light: #f4f4f4;
+  --gray: #7f8c8d;
+  --border-radius: 8px;
+  --shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* 深色模式变量 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #1a2530;
+    --secondary: #2980b9;
+    --dark: #0d0d0d;
+    --light: #2d2d2d;
+    --gray: #aaa;
+  }
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--light);
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+body[data-theme="dark"] {
+  background-color: var(--dark);
+  color: #e0e0e0;
+}
+
+/* 头部样式 */
+#header {
+  background: var(--primary);
+  color: white;
+  padding: 1rem 2rem;
+  box-shadow: var(--shadow);
+}
+
+#branding h1, #branding h1 a:link, #branding h1 a:visited {
+  color: white;
+  font-size: 1.5rem;
+}
+
+/* 导航栏样式 */
+#user-tools {
+  color: rgba(255,255,255,0.8);
+  font-size: 0.9rem;
+}
+
+/* 主要内容区域 */
+#content {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.module {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+body[data-theme="dark"] .module {
+  background: var(--light);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.module h2, .module caption, .inline-group h2 {
+  background: var(--secondary);
+  color: white;
+  padding: 1rem;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* 表格样式 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table tbody tr:nth-child(even) {
+  background-color: rgba(0,0,0,0.03);
+}
+
+body[data-theme="dark"] table tbody tr:nth-child(even) {
+  background-color: rgba(255,255,255,0.05);
+}
+
+th {
+  background: var(--secondary);
+  color: white;
+  text-align: left;
+  padding: 0.8rem;
+}
+
+td {
+  padding: 0.8rem;
+  border-bottom: 1px solid #eee;
+}
+
+body[data-theme="dark"] td {
+  border-bottom: 1px solid #444;
+}
+
+/* 链接样式 */
+a:link, a:visited {
+  color: var(--secondary);
+  text-decoration: none;
+}
+
+a:hover, a:active {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+body[data-theme="dark"] a:link, 
+body[data-theme="dark"] a:visited {
+  color: #3498db;
+}
+
+body[data-theme="dark"] a:hover, 
+body[data-theme="dark"] a:active {
+  color: #5dade2;
+}
+
+/* 按钮样式 */
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+  background: var(--secondary);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover, a.button:hover {
+  background: #2980b9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.button:active, input[type=submit]:active, input[type=button]:active, .submit-row input:active, a.button:active {
+  transform: translateY(0);
+}
+
+.button.default, input[type=submit].default, .submit-row input.default {
+  background: var(--success);
+}
+
+.button.default:hover, input[type=submit].default:hover, .submit-row input.default:hover {
+  background: #27ae60;
+}
+
+/* 表单样式 */
+.form-row {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+body[data-theme="dark"] .form-row {
+  border-bottom: 1px solid #444;
+}
+
+.form-row:last-child {
+  border-bottom: none;
+}
+
+/* 消息样式 */
+.messages {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: var(--border-radius);
+}
+
+.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+body[data-theme="dark"] .success {
+  background: #2c5a35;
+  color: #d4edda;
+  border-color: #3b7a48;
+}
+
+.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+body[data-theme="dark"] .error {
+  background: #6b2c32;
+  color: #f8d7da;
+  border-color: #8a3d45;
+}
+
+.warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+body[data-theme="dark"] .warning {
+  background: #66521d;
+  color: #fff3cd;
+  border-color: #856c28;
+}
+
+/* 侧边栏 */
+#content-related {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+}
+
+body[data-theme="dark"] #content-related {
+  background: var(--light);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  #content {
+    padding: 1rem;
+  }
+  
+  .module {
+    margin-bottom: 1rem;
+  }
+}
+</style>
+{% endblock %}
+{% if not is_popup and is_nav_sidebar_enabled %}
+  <link rel="stylesheet" href="{% static "admin/css/nav_sidebar.css" %}">
+{% endif %}
+{% block extrahead %}{% endblock %}
+</head>
+
+<body class="{% if is_popup %}popup {% endif %}{% block bodyclass %}{% endblock %}"
+  data-admin-utc-offset="{% now "Z" %}">
+
+<!-- Container -->
+<div id="container">
+
+    {% if not is_popup %}
+    <!-- Header -->
+    <div id="header">
+        <div id="branding">
+        {% block branding %}{% endblock %}
+        </div>
+        {% block usertools %}
+        {% if has_permission %}
+        <div id="user-tools">
+            {% block welcome-msg %}
+                {% translate 'Welcome,' %}
+                <strong>{% firstof user.get_short_name user.get_username %}</strong>.
+            {% endblock %}
+            {% block userlinks %}
+                {% if site_url %}
+                    <a href="{{ site_url }}">{% translate 'View site' %}</a> /
+                {% endif %}
+                {% if user.is_active and user.is_staff %}
+                    {% url 'django-admindocs-docroot' as docsroot %}
+                    {% if docsroot %}
+                        <a href="{{ docsroot }}">{% translate 'Documentation' %}</a> /
+                    {% endif %}
+                {% endif %}
+                {% if user.has_usable_password %}
+                <a href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a> /
+                {% endif %}
+                <a href="{% url 'admin:logout' %}">{% translate 'Log out' %}</a>
+            {% endblock %}
+        </div>
+        {% endif %}
+        {% endblock %}
+        {% block nav-global %}{% endblock %}
+    </div>
+    <!-- END Header -->
+    {% block breadcrumbs %}
+    <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    {% if title %} &rsaquo; {{ title }}{% endif %}
+    </div>
+    {% endblock %}
+    {% endif %}
+
+    {% block messages %}
+        {% if messages %}
+        <ul class="messagelist">{% for message in messages %}
+          <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message|capfirst }}</li>
+        {% endfor %}</ul>
+        {% endif %}
+    {% endblock messages %}
+
+    <!-- Content -->
+    <div id="content" class="{% block coltype %}colM{% endblock %}">
+        {% block pretitle %}{% endblock %}
+        {% block content_title %}{% if title %}<h1>{{ title }}</h1>{% endif %}{% endblock %}
+        {% block content %}
+        {% block object-tools %}{% endblock %}
+        {{ content }}
+        {% endblock %}
+        {% block sidebar %}{% endblock %}
+        <br class="clear">
+    </div>
+    <!-- END Content -->
+
+    {% block footer %}<div id="footer"></div>{% endblock %}
+</div>
+<!-- END Container -->
+</body>
+</html>

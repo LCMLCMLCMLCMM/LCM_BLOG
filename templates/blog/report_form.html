@@ -1,0 +1,73 @@
+<!-- 举报表单模态框 -->
+<div id="reportModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeReportModal()">&times;</span>
+        <h3>举报内容</h3>
+        <form id="reportForm" method="post" action="{% url 'report_content' %}">
+            {% csrf_token %}
+            <input type="hidden" name="post_id" id="reportPostId">
+            <input type="hidden" name="comment_id" id="reportCommentId">
+            <div class="form-group">
+                <label for="reportReason">举报原因:</label>
+                <textarea id="reportReason" name="reason" class="form-control" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn">提交举报</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+}
+</style>
+
+<script>
+function openReportModal(postId, commentId) {
+    document.getElementById('reportPostId').value = postId || '';
+    document.getElementById('reportCommentId').value = commentId || '';
+    document.getElementById('reportModal').style.display = 'block';
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+// 点击模态框外部关闭
+window.onclick = function(event) {
+    var modal = document.getElementById('reportModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>

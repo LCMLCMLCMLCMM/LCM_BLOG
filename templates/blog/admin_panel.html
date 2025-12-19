@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}管理员面板 - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2>管理员面板</h2>
+        <a href="{% url 'admin:index' %}" class="btn btn-primary">进入 Django Admin</a>
+    </div>
+    
+    <!-- 统计信息 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>{{ users_count }}</h3>
+            <p>用户总数</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ posts_count }}</h3>
+            <p>文章总数</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ comments_count }}</h3>
+            <p>评论总数</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ reports_pending }}</h3>
+            <p>待处理举报</p>
+        </div>
+    </div>
+    
+    <!-- 待处理举报 -->
+    <div class="section">
+        <h3>待处理举报</h3>
+        {% if pending_reports %}
+            <div class="reports-list">
+                {% for report in pending_reports %}
+                    <div class="report-item">
+                        <div class="report-header">
+                            <span class="reporter">举报人: {{ report.reporter.username }}</span>
+                            <span class="date">{{ report.date_reported|date:"Y-m-d H:i" }}</span>
+                        </div>
+                        <div class="report-content">
+                            <p><strong>举报原因:</strong> {{ report.reason }}</p>
+                            {% if report.post %}
+                                <p><strong>被举报文章:</strong> <a href="{% url 'post_detail' report.post.id %}">{{ report.post.title }}</a></p>
+                            {% endif %}
+                            {% if report.comment %}
+                                <p><strong>被举报评论:</strong> {{ report.comment.content|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="report-actions">
+                            <a href="{% url 'handle_report' report.id 'resolve' %}" class="btn btn-success">标记为已解决</a>
+                            <a href="{% url 'handle_report' report.id 'dismiss' %}" class="btn btn-warning">驳回</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>暂无待处理举报。</p>
+        {% endif %}
+    </div>
+    
+    <!-- 用户管理（仅站长可见） -->
+    {% if user.is_master and users %}
+    <div class="section">
+        <h3>用户管理</h3>
+        <div class="users-list">
+            {% for u in users %}
+                <div class="user-item">
+                    <div class="user-info">
+                        <span class="username">{{ u.username }}</span>
+                        <span class="role">{{ u.get_role_display }}</span>
+                        {% if u.is_banned %}
+                            <span class="status banned">已封禁</span>
+                        {% endif %}
+                        {% if u.is_muted %}
+                            <span class="status muted">已禁言</span>
+                        {% endif %}
+                    </div>
+                    <div class="user-actions">
+                        {% if u != user %} <!-- 不能操作自己 -->
+                            {% if u.role == 'user' %}
+                                <a href="{% url 'toggle_admin' u.id %}" class="btn btn-primary">设为管理员</a>
+                            {% elif u.role == 'admin' %}
+                                <a href="{% url 'toggle_admin' u.id %}" class="btn btn-secondary">撤销管理员</a>
+                            {% endif %}
+                            
+                            {% if u.is_banned %}
+                                <a href="{% url 'toggle_user_ban' u.id %}" class="btn btn-success">解封</a>
+                            {% else %}
+                                <a href="{% url 'toggle_user_ban' u.id %}" class="btn btn-danger">封禁</a>
+                            {% endif %}
+                            
+                            {% if u.is_muted %}
+                                <a href="{% url 'toggle_user_mute' u.id %}" class="btn btn-success">解除禁言</a>
+                            {% else %}
+                                <a href="{% url 'toggle_user_mute' u.id %}" class="btn btn-warning">禁言</a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

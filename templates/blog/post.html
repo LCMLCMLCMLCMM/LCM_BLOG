@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ post.title }} - LCM's Blog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <article class="post-detail">
+        <h1>{{ post.title }}</h1>
+        <p class="post-meta">
+            作者: <a href="{% url 'user_home' post.author.id %}">{{ post.author.username }}</a> | 
+            发布时间: {{ post.date_posted|date:"Y-m-d H:i" }}
+            {% if user.is_authenticated and user != post.author %}
+                | <a href="#" onclick="openReportModal({{ post.id }}, null)">举报</a>
+            {% endif %}
+        </p>
+        <div class="post-content">
+            {{ post.content|linebreaks }}
+        </div>
+        
+        {% if user.is_authenticated and user == post.author or user.is_staff %}
+        <div class="post-actions">
+            <a href="{% url 'edit_post' post.id %}" class="btn">编辑</a>
+            <a href="{% url 'delete_post' post.id %}" class="btn btn-danger">删除</a>
+        </div>
+        {% endif %}
+    </article>
+    
+    <!-- 评论区 -->
+    <div class="comments-section">
+        <h3>评论 ({{ comments.count }})</h3>
+        
+        <!-- 发表评论表单 -->
+        {% if user.is_authenticated %}
+            {% if not user.is_muted and not user.is_banned %}
+            <div class="comment-form">
+                <form method="post" action="{% url 'add_comment' post.id %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        {{ form.content }}
+                    </div>
+                    <button type="submit" class="btn">发表评论</button>
+                </form>
+            </div>
+            {% elif user.is_muted %}
+                <p class="alert alert-warning">您已被禁言，无法发表评论。</p>
+            {% elif user.is_banned %}
+                <p class="alert alert-error">您已被封禁，无法发表评论。</p>
+            {% endif %}
+        {% else %}
+            <p><a href="{% url 'login' %}">登录</a> 后方可发表评论。</p>
+        {% endif %}
+        
+        <!-- 评论列表 -->
+        <div class="comments-list">
+            {% for comment in comments %}
+            <div class="comment">
+                <div class="comment-header">
+                    <span class="comment-author">{{ comment.author.username }}</span>
+                    <span class="comment-date">{{ comment.date_posted|date:"Y-m-d H:i" }}</span>
+                    {% if user.is_authenticated and user != comment.author %}
+                        | <a href="#" onclick="openReportModal(null, {{ comment.id }})">举报</a>
+                    {% endif %}
+                </div>
+                <div class="comment-content">
+                    {{ comment.content|linebreaks }}
+                </div>
+                
+                <!-- 回复表单 -->
+                {% if user.is_authenticated and not user.is_muted and not user.is_banned %}
+                <div class="reply-link">
+                    <a href="#" onclick="showReplyForm({{ comment.id }})">回复</a>
+                </div>
+                <div id="reply-form-{{ comment.id }}" class="reply-form" style="display:none;">
+                    <form method="post" action="{% url 'add_comment' post.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                        <div class="form-group">
+                            <textarea name="content" class="form-control" rows="2" placeholder="输入回复内容..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn">发表回复</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideReplyForm({{ comment.id }})">取消</button>
+                    </form>
+                </div>
+                {% endif %}
+                
+                <!-- 子评论 -->
+                {% for reply in comment.replies.all %}
+                <div class="comment reply">
+                    <div class="comment-header">
+                        <span class="comment-author">{{ reply.author.username }}</span>
+                        <span class="comment-date">{{ reply.date_posted|date:"Y-m-d H:i" }}</span>
+                        {% if user.is_authenticated and user != reply.author %}
+                            | <a href="#" onclick="openReportModal(null, {{ reply.id }})">举报</a>
+                        {% endif %}
+                    </div>
+                    <div class="comment-content">
+                        {{ reply.content|linebreaks }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% empty %}
+            <p>暂无评论，快来发表第一条评论吧！</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 举报表单模态框 -->
+<div id="reportModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeReportModal()">&times;</span>
+        <h3>举报内容</h3>
+        <form id="reportForm" method="post" action="{% url 'report_content' %}">
+            {% csrf_token %}
+            <input type="hidden" name="post_id" id="reportPostId">
+            <input type="hidden" name="comment_id" id="reportCommentId">
+            <div class="form-group">
+                <label for="reportReason">举报原因:</label>
+                <textarea id="reportReason" name="reason" class="form-control" rows="4" required></textarea>
+            </div>
+            <button type="submit" class="btn">提交举报</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
