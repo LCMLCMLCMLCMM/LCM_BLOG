@@ -1,6 +1,37 @@
 {% extends 'base.html' %}
 
-{% block title %}首页 - LCM's Blog{% endblock %}
+{% block title %}首页 - LCM's Blog    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 实现每30秒自动刷新主页
+let refreshInterval = setInterval(function() {
+    // 发起页面刷新
+    location.reload();
+}, 30000); // 30000毫秒 = 30秒
+
+// 页面隐藏时暂停刷新，页面显示时恢复刷新（优化性能）
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+        // 页面隐藏时清除定时器
+        clearInterval(refreshInterval);
+    } else {
+        // 页面显示时重新启动定时器
+        refreshInterval = setInterval(function() {
+            location.reload();
+        }, 5000);
+    }
+});
+
+// 页面卸载时清除定时器
+window.addEventListener('beforeunload', function() {
+    clearInterval(refreshInterval);
+});
+</script>
+{% endblock %}
 
 {% block content %}
 <div class="container">

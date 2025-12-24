@@ -1451,6 +1451,30 @@
             background-color: #444;
             border-color: #666;
         }
+        
+        /* 嵌入图片样式 */
+        .embedded-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px 0;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        body[data-theme="dark"] .embedded-image {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* 确保在文章内容中的图片正确显示 */
+        .post-content img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        body[data-theme="dark"] .post-content img {
+            filter: none;
+        }
     </style>
 </head>
 <body data-theme="{{ request.user.theme_preference|default:request.COOKIES.theme|default:'light' }}">

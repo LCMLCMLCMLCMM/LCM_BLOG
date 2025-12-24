@@ -12,6 +12,9 @@ from django.views.decorators.http import require_http_methods
 from django.core.cache import cache
 from .models import Post, User, Comment, Report, Friendship, PrivateMessage, Category, Tag, Notification
 from .forms import CustomUserCreationForm, UserUpdateForm, PostForm, CommentForm, PasswordChangeForm
+import base64
+from PIL import Image
+from io import BytesIO
 
 
 @cache_page(60 * 5)  # 缓存5分钟
@@ -206,7 +209,7 @@ def register(request):
 @login_required
 def create_post(request):
     """
-    创建文章视图
+    创建文章视图 - 支持图片上传
     """
     if request.user.is_banned:
         messages.error(request, '用户已被封禁')
@@ -215,12 +218,38 @@ def create_post(request):
     if request.user.is_muted:
         messages.error(request, '用户已被禁言，无法发表文章')
         return redirect('home')
-    
+
     if request.method == 'POST':
-        form = PostForm(request.POST)
+        form = PostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
+            
+            # 如果有图片上传，将其转换为base64并插入到内容中
+            if 'image_upload' in request.FILES:
+                image_file = request.FILES['image_upload']
+                try:
+                    # 使用PIL处理图像
+                    img = Image.open(image_file)
+                    # 转换为RGB模式（如果需要）
+                    if img.mode in ('RGBA', 'LA', 'P'):
+                        img = img.convert('RGB')
+                    # 调整大小以优化存储（可选，根据需要调整）
+                    # img.thumbnail((800, 600), Image.Resampling.LANCZOS)  # 限制图片大小
+                    # 保存到内存中的BytesIO对象
+                    buffer = BytesIO()
+                    img.save(buffer, format='JPEG', quality=85)  # 使用JPEG格式以减少大小
+                    # 获取图像数据并转换为base64
+                    img_str = base64.b64encode(buffer.getvalue()).decode()
+                    # 将base64图片插入到内容中（不使用style属性，依赖CSS类）
+                    base64_image = f'<img src="data:image/jpeg;base64,{img_str}" alt="上传的图片" class="embedded-image">'
+                    
+                    # 将图片插入到原始内容的开头
+                    post.content = base64_image + '<br>' + post.content
+                except Exception as e:
+                    messages.error(request, f'图片处理失败: {str(e)}')
+                    return render(request, 'blog/create_post.html', {'form': form})
+            
             post.save()
             form.save_m2m()  # 保存多对多关系（标签）
             
@@ -238,7 +267,7 @@ def create_post(request):
 @login_required
 def edit_post(request, post_id):
     """
-    编辑文章视图
+    编辑文章视图 - 支持图片上传
     """
     post = get_object_or_404(Post, id=post_id)
     
@@ -250,11 +279,39 @@ def edit_post(request, post_id):
     if request.user.is_banned:
         messages.error(request, '用户已被封禁')
         return render(request, 'blog/banned.html')
-    
+
     if request.method == 'POST':
-        form = PostForm(request.POST, instance=post)
+        form = PostForm(request.POST, request.FILES, instance=post)
         if form.is_valid():
-            form.save()
+            post = form.save(commit=False)
+            
+            # 如果有图片上传，将其转换为base64并插入到内容中
+            if 'image_upload' in request.FILES:
+                image_file = request.FILES['image_upload']
+                try:
+                    # 使用PIL处理图像
+                    img = Image.open(image_file)
+                    # 转换为RGB模式（如果需要）
+                    if img.mode in ('RGBA', 'LA', 'P'):
+                        img = img.convert('RGB')
+                    # 调整大小以优化存储（可选，根据需要调整）
+                    # img.thumbnail((800, 600), Image.Resampling.LANCZOS)  # 限制图片大小
+                    # 保存到内存中的BytesIO对象
+                    buffer = BytesIO()
+                    img.save(buffer, format='JPEG', quality=85)  # 使用JPEG格式以减少大小
+                    # 获取图像数据并转换为base64
+                    img_str = base64.b64encode(buffer.getvalue()).decode()
+                    # 将base64图片插入到内容中（不使用style属性，依赖CSS类）
+                    base64_image = f'<img src="data:image/jpeg;base64,{img_str}" alt="上传的图片" class="embedded-image">'
+                    
+                    # 将图片插入到原始内容的开头
+                    post.content = base64_image + '<br>' + post.content
+                except Exception as e:
+                    messages.error(request, f'图片处理失败: {str(e)}')
+                    return render(request, 'blog/edit_post.html', {'form': form, 'post': post})
+            
+            post.save()
+            form.save_m2m()  # 保存多对多关系（标签）
             
             # 清除相关缓存
             cache.delete(f'post_{post_id}')
@@ -972,3 +1029,47 @@ def delete_account(request):
             return redirect('profile')
     
     return render(request, 'blog/delete_account.html')
+
+
+@login_required
+@require_http_methods(["POST"])
+def upload_image(request):
+    """
+    上传图片并返回base64编码的视图
+    """
+    if 'image' in request.FILES:
+        image_file = request.FILES['image']
+        
+        try:
+            # 使用PIL验证并处理图像
+            img = Image.open(image_file)
+            # 转换为RGB模式（如果需要）
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+            
+            # 调整大小以优化存储
+            img.thumbnail((800, 600), Image.Resampling.LANCZOS)  # 限制图片大小
+            
+            # 保存到内存中的BytesIO对象
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG', quality=85)  # 使用JPEG格式以减少大小
+            
+            # 获取图像数据并转换为base64
+            img_str = base64.b64encode(buffer.getvalue()).decode()
+            
+            # 返回base64编码的图片
+            return JsonResponse({
+                'success': True,
+                'image_data': f'data:image/jpeg;base64,{img_str}',
+                'message': '图片上传成功'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'图片处理失败: {str(e)}'
+            })
+    else:
+        return JsonResponse({
+            'success': False,
+            'message': '未找到上传的图片'
+        })

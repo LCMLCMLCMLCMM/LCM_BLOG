@@ -6,19 +6,172 @@
 <div class="container">
     <div class="form-container">
         <h2>编辑文章</h2>
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">
-                <label for="title">标题:</label>
-                <input type="text" id="title" name="title" value="{{ post.title }}" required>
+                <label for="{{ form.title.id_for_label }}">标题:</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="error">{{ form.title.errors }}</div>
+                {% endif %}
             </div>
             <div class="form-group">
-                <label for="content">内容:</label>
-                <textarea id="content" name="content" rows="10" required>{{ post.content }}</textarea>
+                <label for="{{ form.category.id_for_label }}">分类:</label>
+                {{ form.category }}
             </div>
+            <div class="form-group">
+                <label for="{{ form.tags.id_for_label }}">标签:</label>
+                {{ form.tags }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.content.id_for_label }}">内容:</label>
+                <div class="markdown-toolbar">
+                    <button type="button" onclick="insertMarkdown('**', '**', '粗体')" title="粗体">B</button>
+                    <button type="button" onclick="insertMarkdown('*', '*', '斜体')" title="斜体">I</button>
+                    <button type="button" onclick="insertMarkdown('`', '`', '代码')" title="代码">C</button>
+                    <button type="button" onclick="insertImage()" title="插入图片">🖼️</button>
+                    <button type="button" onclick="insertMarkdown('[', ']()', '链接')" title="链接">🔗</button>
+                </div>
+                <textarea id="{{ form.content.id_for_label }}" name="{{ form.content.html_name }}" rows="{{ form.content.field.widget.attrs.rows|default:10 }}" class="{{ form.content.field.widget.attrs.class }}">{{ form.content.value|default:'' }}</textarea>
+                {% if form.content.errors %}
+                    <div class="error">{{ form.content.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="image-upload-input">上传新图片:</label>
+                <input type="file" id="image-upload-input" name="image_upload" accept="image/*" style="display: none;" onchange="handleImageUpload(this)">
+                <button type="button" onclick="document.getElementById('image-upload-input').click()" class="btn btn-secondary">选择图片文件</button>
+                <span id="image-filename" style="margin-left: 10px; color: #6c757d;"></span>
+                <div id="image-preview" style="margin-top: 10px;"></div>
+            </div>
+            <p class="help-text">支持Markdown格式，可使用 <strong>**粗体**</strong>, <em>*斜体*</em>, <code>`代码`</code>, <a href="#" title="链接示例">[链接](url)</a> 等格式。</p>
+            <p class="help-text">也可以直接上传图片，系统会自动转换为base64格式嵌入文章中。</p>
             <button type="submit" class="btn">更新文章</button>
         </form>
         <a href="{% url 'post_detail' post.id %}" class="btn btn-secondary">取消</a>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 为编辑器添加一些基本的Markdown快捷功能
+document.addEventListener('DOMContentLoaded', function() {
+    const contentTextarea = document.getElementById('{{ form.content.id_for_label }}');
+    
+    if (contentTextarea) {
+        // 添加工具栏按钮（已经在HTML中添加）
+    }
+});
+
+function insertMarkdown(before, after, placeholder) {
+    const textarea = document.getElementById('{{ form.content.id_for_label }}');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const textToInsert = before + (selectedText || placeholder) + after;
+    
+    textarea.value = textarea.value.substring(0, start) + textToInsert + textarea.value.substring(end);
+    
+    // 将光标移到插入内容之后
+    const newCursorPos = start + textToInsert.length - (after.length);
+    textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+    textarea.focus();
+}
+
+function insertImage() {
+    // 触发文件选择
+    document.getElementById('image-upload-input').click();
+}
+
+function handleImageUpload(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const filename = file.name;
+        document.getElementById('image-filename').textContent = filename;
+        
+        // 验证是否为图片文件
+        if (!file.type.match('image.*')) {
+            alert('请选择有效的图片文件');
+            return;
+        }
+        
+        // 上传图片到服务器并获取base64编码
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        fetch('{% url "upload_image" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 在内容中插入base64图片
+                const textarea = document.getElementById('{{ form.content.id_for_label }}');
+                const currentContent = textarea.value;
+                // 使用带embedded-image类的img标签
+                const imgTag = `\n<img src="${data.image_data}" alt="上传的图片" class="embedded-image">\n`;
+                
+                // 插入到当前光标位置或内容末尾
+                const startPos = textarea.selectionStart;
+                const endPos = textarea.selectionEnd;
+                textarea.value = currentContent.substring(0, startPos) + imgTag + currentContent.substring(endPos);
+                
+                // 更新光标位置
+                const newCursorPos = startPos + imgTag.length;
+                textarea.selectionStart = textarea.selectionEnd = newCursorPos;
+                textarea.focus();
+                
+                // 显示预览
+                document.getElementById('image-preview').innerHTML = `<img src="${data.image_data}" class="embedded-image" style="max-width: 200px; max-height: 200px; margin-top: 10px;">`;
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('图片上传失败');
+        });
+    }
+}
+
+// 添加图片拖放功能
+document.addEventListener('DOMContentLoaded', function() {
+    const contentTextarea = document.getElementById('{{ form.content.id_for_label }}');
+    if (contentTextarea) {
+        // 防止默认拖拽行为
+        contentTextarea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        // 处理文件拖拽到文本区域
+        contentTextarea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (e.dataTransfer.files.length) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith('image/')) {
+                    // 创建一个临时input元素来处理文件
+                    const tempInput = document.createElement('input');
+                    tempInput.type = 'file';
+                    tempInput.style.display = 'none';
+                    
+                    // 使用DataTransfer对象模拟文件选择
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    tempInput.files = dataTransfer.files;
+                    
+                    handleImageUpload(tempInput);
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

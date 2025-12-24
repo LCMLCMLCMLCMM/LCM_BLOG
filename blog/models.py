@@ -3,7 +3,12 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 import hashlib
-
+import base64
+import os
+from PIL import Image
+from io import BytesIO
+import markdown
+import bleach
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -27,8 +32,8 @@ class User(AbstractUser):
     birthday = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     
-    # 添加头像字段
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    # 修改头像字段为TextField以存储base64编码的图像
+    avatar = models.TextField(blank=True, null=True)  # 存储base64编码的图像数据
 
     def __str__(self):
         return self.username
@@ -40,9 +45,14 @@ class User(AbstractUser):
         super().save(*args, **kwargs)
         
     def get_avatar_url(self):
-        """获取用户头像URL"""
+        """获取用户头像URL - 如果是base64编码的头像则返回data URL，否则返回原始逻辑"""
         if self.avatar:
-            return self.avatar.url
+            # 如果avatar是base64编码的数据，直接返回data URL
+            if self.avatar.startswith('data:image'):
+                return self.avatar
+            else:
+                # 如果只是base64字符串，添加data URL前缀
+                return f'data:image/png;base64,{self.avatar}'
         elif self.avatar_url:
             return self.avatar_url
         else:
@@ -50,6 +60,26 @@ class User(AbstractUser):
             email_hash = hashlib.md5(self.email.lower().encode('utf-8')).hexdigest() if self.email else '00000000000000000000000000000000'
             return f'https://www.gravatar.com/avatar/{email_hash}?d=identicon'
             
+    def set_avatar_from_file(self, image_file):
+        """从上传的文件设置base64编码的头像"""
+        try:
+            # 使用Pillow处理图像
+            img = Image.open(image_file)
+            # 转换为RGB模式（如果需要）
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+            # 调整大小以优化存储
+            img.thumbnail((200, 200), Image.Resampling.LANCZOS)
+            # 保存到内存中的BytesIO对象
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            # 获取图像数据并转换为base64
+            img_str = base64.b64encode(buffer.getvalue()).decode()
+            self.avatar = img_str
+        except Exception as e:
+            print(f"Error processing avatar image: {e}")
+            raise
+
     @property
     def is_master(self):
         """判断是否为站长"""
@@ -100,6 +130,59 @@ class Post(models.Model):
     def __str__(self):
         return self.title
 
+    def get_rendered_content(self):
+        """渲染文章内容，支持Markdown和安全的HTML，包括base64图片"""
+        # 检查内容是否包含base64图片（以data:image/开头的img标签）
+        # 如果是，我们直接使用HTML，但要清理其他不安全的内容
+        if '<img src="data:image/' in self.content:
+            # 内容包含base64图片，直接使用HTML，但要清理其他不安全的内容
+            allowed_tags = [
+                'p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'blockquote', 'pre', 'code', 'hr', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'a', 'img',
+                'div', 'span', 'figure', 'figcaption'
+            ]
+            allowed_attributes = {
+                'a': ['href', 'title', 'target'],
+                'img': ['src', 'alt', 'title', 'width', 'height', 'class'],  # 确保允许class属性
+                'div': ['class'],
+                'span': ['class'],
+                'p': ['class'],
+                'code': ['class'],
+                'pre': ['class'],
+                'td': ['style'],
+                'th': ['style'],
+                'table': ['style'],
+                'tr': ['style']
+            }
+            clean_html = bleach.clean(self.content, tags=allowed_tags, attributes=allowed_attributes, strip=True)
+            return clean_html
+        else:
+            # 使用Markdown转换
+            md = markdown.markdown(self.content, extensions=[
+                'extra',      # 包含表格、代码块等
+                'codehilite', # 代码高亮
+                'toc',        # 目录
+                'nl2br'       # 换行符转为<br>
+            ])
+            
+            # 使用bleach清理HTML，防止XSS攻击
+            allowed_tags = [
+                'p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                'blockquote', 'pre', 'code', 'hr', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'a', 'img',
+                'div', 'span', 'figure', 'figcaption'
+            ]
+            allowed_attributes = {
+                'a': ['href', 'title', 'target'],
+                'img': ['src', 'alt', 'title', 'width', 'height', 'class'],  # 确保允许class属性
+                'div': ['class'],
+                'span': ['class'],
+                'p': ['class'],
+                'code': ['class'],
+                'pre': ['class']
+            }
+            clean_html = bleach.clean(md, tags=allowed_tags, attributes=allowed_attributes, strip=True)
+            return clean_html
+
     class Meta:
         ordering = ['-date_posted']
 
@@ -113,6 +196,19 @@ class Comment(models.Model):
 
     def __str__(self):
         return f'{self.author.username}: {self.content[:20]}...'
+    
+    def get_rendered_content(self):
+        """渲染评论内容，支持Markdown和安全的HTML"""
+        # 先转换Markdown
+        md = markdown.markdown(self.content, extensions=['nl2br'])  # 简单的换行转换
+        
+        # 使用bleach清理HTML，防止XSS攻击
+        allowed_tags = ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'code', 'pre', 'a']
+        allowed_attributes = {
+            'a': ['href', 'title'],
+        }
+        clean_html = bleach.clean(md, tags=allowed_tags, attributes=allowed_attributes, strip=True)
+        return clean_html
 
     class Meta:
         ordering = ['-date_posted']

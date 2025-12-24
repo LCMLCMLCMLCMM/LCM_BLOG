@@ -34,4 +34,5 @@ urlpatterns = [
     path('toggle_user_ban/<int:user_id>/', views.toggle_user_ban, name='toggle_user_ban'),
     path('toggle_user_mute/<int:user_id>/', views.toggle_user_mute, name='toggle_user_mute'),
     path('toggle_admin/<int:user_id>/', views.toggle_admin, name='toggle_admin'),
+    path('upload_image/', views.upload_image, name='upload_image'),
 ]
